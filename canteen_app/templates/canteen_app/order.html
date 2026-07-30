@@ -1,0 +1,363 @@
+{% extends "canteen_app/base.html" %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&family=Rubik:wght@500;700&display=swap');
+
+:root{
+  --green-1: #0fb46b;
+  --green-2: #17a35a;
+  --mint: #e9fff3;
+  --warm-1:#ffb566;
+  --ink: #13231a;
+  --muted:#55695f;
+  --card:#ffffff;
+}
+
+body {
+  background:
+    linear-gradient(135deg, rgba(15,180,107,0.06) 10%, rgba(255,190,120,0.02) 40%, rgba(255,255,255,0.02) 60%),
+    repeating-linear-gradient(135deg, rgba(0,0,0,0.01) 0 6px, rgba(255,255,255,0.00) 6px 12px),
+    linear-gradient(180deg,#fbfff9,#f7fff7);
+  font-family: "Rubik", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  color: var(--ink);
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 28px auto;
+  padding: 18px;
+}
+
+/* Heading */
+h3, h4, h5 {
+  color: var(--green-2);
+  font-weight:700;
+}
+
+/* Row spacing */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -6px;
+}
+.row > [class*="col-"] {
+  padding: 6px;
+}
+
+/* Sidebar filters */
+.col-md-4 {
+  background: linear-gradient(180deg, #fff,#f3fff7);
+  border-radius: 14px;
+  padding: 18px;
+  border: 1px solid rgba(19,58,40,0.06);
+  box-shadow: 0 14px 34px rgba(30,120,70,0.06);
+  margin-bottom: 16px;
+}
+.col-md-4 label {
+  font-weight:600;
+  margin-top:10px;
+}
+.col-md-4 input, .col-md-4 select {
+  margin-bottom:10px;
+  border-radius: 8px;
+  border:1px solid rgba(0,0,0,0.1);
+}
+
+/* Buttons */
+.btn {
+  border-radius: 999px;
+  font-weight:700;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(15,180,107,0.2);
+}
+
+/* Combo Cards */
+.comboCard {
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.03);
+  padding:14px;
+  margin-bottom:12px;
+  box-shadow: 0 12px 28px rgba(12,40,20,0.04);
+}
+.comboCard b {
+  display:block;
+  margin-bottom:6px;
+  color: var(--green-2);
+}
+.comboCard .comboItems li {
+  margin:4px 0;
+}
+
+/* Full Menu Cards */
+.card {
+  background: var(--card);
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,0.03);
+  padding:10px;
+  box-shadow: 0 10px 24px rgba(12,40,20,0.03);
+  margin-bottom:12px;
+  text-align:center;
+}
+.card h6 {
+  color: var(--green-2);
+  font-weight:700;
+  margin-bottom:6px;
+}
+.card p {
+  color: var(--muted);
+  margin-bottom:6px;
+}
+
+/* Form buttons */
+#orderSelected, #getCombos {
+  margin-top: 12px;
+}
+
+/* Footer */
+.order-footer { 
+  margin-top:18px;
+  color:#6f7f72; 
+  text-align:center; 
+  font-size:0.95rem; 
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .row {
+    flex-direction:column;
+  }
+  .col-md-4, .col-md-8 {
+    max-width:100%;
+    flex:1 1 100%;
+  }
+}
+</style>
+
+<h3>Order with AI </h3>
+
+<div class="row">
+  <div class="col-md-4">
+    <label>Type</label>
+    <select id="typeSel" class="form-control">
+      <option value="">All</option>
+      <option>Veg</option>
+      <option>Nonveg</option>
+    </select>
+
+    <label class="mt-2">Budget (₹)</label>
+    <input id="budget" class="form-control" type="number" value="80">
+
+    <label class="mt-2">Time (Meal Type)</label>
+    <select id="mealTypeSel" class="form-control">
+      <option value="">None</option>
+      <option>Breakfast</option>
+      <option>Lunch</option>
+    </select>
+
+    <label class="mt-2">Maximum Items</label>
+    <input id="maxItems" class="form-control" type="number" value="4" min="1" max="10">
+
+    <button id="getCombos" class="btn btn-primary mt-3">Get Combos</button>
+  </div>
+
+  <div class="col-md-8">
+   
+    <div id="combosArea"></div>
+  </div>
+</div>
+
+<hr>
+<h4>Full Menu (Direct select)</h4>
+<form id="menuForm">
+  <div class="row">
+    {% for item in menu %}
+      <div class="col-md-3">
+        <div class="card mb-2">
+          <div class="card-body">
+            <h6>{{ item.name }}</h6>
+            <p>₹{{ item.price }} | {{ item.type }}</p>
+            <input type="checkbox" name="menu_cb" value="{{ item.itemid }}"> Add
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  <button type="button" id="orderSelected" class="btn btn-success mt-2">Order Selected</button>
+</form>
+
+<script>
+document.getElementById('getCombos').onclick = async function() {
+  const type = document.getElementById('typeSel').value;
+  const budget = document.getElementById('budget').value;
+  const mealType = document.getElementById('mealTypeSel').value;
+  const maxItems = document.getElementById('maxItems').value;
+
+  const params = new URLSearchParams({
+    type,
+    budget,
+    meal_type: mealType,
+    max_items: maxItems
+  });
+  const res = await fetch(`/api/recommend/?${params.toString()}`);
+  const j = await res.json();
+
+  const combosArea = document.getElementById('combosArea');
+  combosArea.innerHTML = '';
+
+  if(!j.combos || j.combos.length === 0) {
+    combosArea.innerHTML = '<p>No combos found for the given criteria.</p>';
+    return;
+  }
+
+  j.combos.slice(0,5).forEach((c, idx) => {
+    const card = document.createElement('div');
+    card.classList.add('card', 'mb-2', 'p-2', 'comboCard');
+
+    let html = `<b>Combo ${idx+1}</b>
+<div>Total Bill: <span class="comboPrice">${c.total_price.toFixed(2)}</span></div>
+<div>Utility: <span class="comboUtil">${c.total_utility}</span></div>
+<button class="btn btn-sm btn-outline-success orderCombo">Order</button>
+<button class="btn btn-sm btn-outline-secondary toggleEdit">Edit</button>
+<ul class="comboItems mt-2" style="display:none;">`;
+
+    c.items.forEach(it => {
+      html += `<li>
+        ${it.ItemName} - ₹${it.Price.toFixed(2)}
+        <input type="checkbox" class="itemPick" value="${it.ItemID}" data-price="${it.Price}" data-utility="${it.utility}" checked>
+      </li>`;
+    });
+
+    html += `</ul>`;
+
+    // Add Item dropdown section
+    html += `<div class="addItemSection mt-2" style="display:none;">
+                <b>Add Item:</b>
+                <select class="addItemDropdown form-control mt-1">
+                    <option value="">Select Item</option>`;
+    {% for item in menu %}
+        html += `<option value="{{ item.itemid }}" data-price="{{ item.price }}" data-name="{{ item.name }}">{{ item.name }} - ₹{{ item.price }}</option>`;
+    {% endfor %}
+    html += `</select>
+            </div>`;
+
+    card.innerHTML = html;
+    combosArea.appendChild(card);
+  });
+
+  // Toggle Edit visibility
+  document.querySelectorAll('.toggleEdit').forEach(btn => {
+    btn.onclick = function() {
+      const ul = this.closest('.comboCard').querySelector('.comboItems');
+      ul.style.display = ul.style.display === 'none' ? 'block' : 'none';
+      const addSec = this.closest('.comboCard').querySelector('.addItemSection');
+      addSec.style.display = addSec.style.display === 'none' ? 'block' : 'none';
+    }
+  });
+
+  // Update price and utility dynamically for checkbox items
+  document.querySelectorAll('.itemPick').forEach(chk => {
+    chk.onchange = function() {
+        const card = this.closest('.comboCard');
+        const ul = card.querySelector('.comboItems');
+        let totalPrice = 0;
+        ul.querySelectorAll('li').forEach(li => {
+            // Only include checked checkboxes or added items without checkbox
+            const chkInput = li.querySelector('.itemPick');
+            if(!chkInput || chkInput.checked) {
+                const priceText = li.innerText.split('₹')[1];
+                totalPrice += priceText ? parseFloat(priceText) : 0;
+            }
+        });
+        card.querySelector('.comboPrice').innerText = totalPrice.toFixed(2);
+    }
+});
+
+
+  // Add item via dropdown
+  document.querySelectorAll('.addItemDropdown').forEach(drop => {
+    drop.onchange = function() {
+        const card = this.closest('.comboCard');
+        const val = this.value;
+        if(!val) return;
+
+        const selectedOption = this.selectedOptions[0];
+        const itemName = selectedOption.dataset.name;
+        const price = parseFloat(selectedOption.dataset.price);
+
+        const ul = card.querySelector('.comboItems');
+        ul.style.display = 'block';
+
+        const li = document.createElement('li');
+        li.dataset.id = val;
+        li.innerHTML = `${itemName} - ₹${price.toFixed(2)} <button class="btn btn-sm btn-danger btnRemoveItem" style="margin-left:10px;">×</button>`;
+        ul.appendChild(li);
+
+        // Remove item handler
+        li.querySelector('.btnRemoveItem').onclick = function() {
+            li.remove();
+            const totalPrice = Array.from(ul.querySelectorAll('li')).reduce((sum, li) => {
+                const priceText = li.innerText.split('₹')[1];
+                return sum + (priceText ? parseFloat(priceText) : 0);
+            }, 0);
+            card.querySelector('.comboPrice').innerText = totalPrice.toFixed(2);
+        };
+
+        // Update total bill after adding
+        const totalPrice = Array.from(ul.querySelectorAll('li')).reduce((sum, li) => {
+            const priceText = li.innerText.split('₹')[1];
+            return sum + (priceText ? parseFloat(priceText) : 0);
+        }, 0);
+        card.querySelector('.comboPrice').innerText = totalPrice.toFixed(2);
+
+        this.value = '';
+    }
+  });
+
+  // Order combo
+  document.querySelectorAll('.orderCombo').forEach(btn => {
+    btn.onclick = async function() {
+      const card = this.closest('.comboCard');
+      const items = Array.from(card.querySelectorAll('.itemPick:checked')).map(x => x.value);
+
+      // Include added items from dropdown
+      Array.from(card.querySelectorAll('.comboItems li')).forEach(li => {
+          const dataId = li.dataset.id;
+          if(dataId && !items.includes(dataId)) items.push(dataId);
+      });
+
+      if(items.length === 0){ alert('Select at least one item'); return; }
+
+      const resp = await fetch('/api/place_order/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ items: items })
+      });
+      const j2 = await resp.json();
+      if(j2.status === 'ok') alert('Order placed, id: ' + j2.order_id);
+      else alert('Error: ' + (j2.error || 'unknown'));
+    }
+  });
+};
+
+// Order selected items from full menu
+document.getElementById('orderSelected').onclick = async function() {
+  const checks = Array.from(document.querySelectorAll('input[name=menu_cb]:checked'));
+  const items = checks.map(c => c.value);
+  if(items.length === 0){ alert('Select items'); return; }
+
+  const resp = await fetch('/api/place_order/', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ items: items })
+  });
+  const j2 = await resp.json();
+  if(j2.status === 'ok') alert('Order placed: ' + j2.order_id);
+  else alert('Error: ' + (j2.error || 'unknown'));
+};
+</script>
+{% endblock %}
