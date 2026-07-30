@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: cafelytics
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn cafelytics_proj.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.6

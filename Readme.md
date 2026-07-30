@@ -228,13 +228,13 @@ The dataset is utilized for:
 Clone the repository
 
 ```bash
-git clone https://github.com/Arpithasingh10/cafelytics.git
+git clone https://github.com/Arpithasingh10/Cafelytics.git
 ```
 
 Move into the project directory
 
 ```bash
-cd cafelytics
+cd Cafelytics
 ```
 
 Install dependencies
